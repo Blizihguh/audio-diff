@@ -2,10 +2,14 @@
 Audio Diff is a tool to find (mis)matched content from two mp3 files, akin to tools that do the same thing for text files ("diff"). Optionally, it will also create a new file, which contains only content that matches between the two files.
 
 # How do I use Audio Diff?
-`usage: audio-diff.py [options] file_1 file_2 [output_file]`
+Dependencies: [pydub](https://github.com/jiaaro/pydub) (`pip install pydub`)
+
+Usage: `audio-diff.py [options] file_1 file_2 [output_file]`
+
 Provide the two files you want to compare, and optionally, the filename for output. A number of command-line options are also supported:
 
 `-q, --quiet` reduces the amount of console output. A single -q will suppress output until the files are fully compared; -qq will suppress all output apart from errors.
+
 `-m, --max` can be used to change how much difference the program should tolerate between two samples before considering them to be different. By default this is 1, so an audio sample of 45 would be considered the same as an audio sample of 44 or 46. It's not recommended to change this, as many audio workflows can be expected to change samples by this much. A stricter setting may introduce false positives, where the program sees two files as different when the difference would be imperceptible to the human ear.
 
 # Why is Audio Diff?
