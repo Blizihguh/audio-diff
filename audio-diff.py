@@ -7,6 +7,7 @@ import logging
 #TODO: Could be worth a setting to reduce sample rate for processing (eg throw out every other sample for ~2x speedup, with minor loss of precision when calculating ad timestamps)
 #TODO: Most ads are going to be ~30 seconds, so it might be worth searching like 14-35 first and then doubling back to 0-14 before doing 35+
 #TODO: Handle different sample rates (downmux? would this even work in practice?)
+#TODO: Once the above is done, -cf flag should have a default of 0, for "use whichever has the higher bitrate"
 
 def data_from_file(path):
 	# Convert the file to an array of samples
@@ -221,8 +222,9 @@ def handle_args():
 	parser.add_argument("file_2", help="The second file to compare.")
 	parser.add_argument("output_file", nargs="?", help="If provided, the matching audio sections will be saved to an mp3 file with that filename.")
 	parser.add_argument("-q", "--quiet", action="count", default=0, help="Reduce amount of output text. Use -q to only output after the files are processed, or -qq to hide all output except errors.")
-	parser.add_argument("-m", "--max", action="store_const", const=1, default=1, help="Set the maximum difference between samples to accept before flagging them as different audio. Default is 1."),
+	parser.add_argument("-m", "--max", action="store", default=1, help="Set the maximum difference between samples to accept before flagging them as different audio. Default is 1."),
 	parser.add_argument("-ms", "--miliseconds", action="count", default=0, help="If provided, timestamps will show miliseconds.")
+	parser.add_argument("-cf", "--cutfile", action="store", default=0, help="Specify which file to use when recutting, eg -cf 1 to use file 1. By default the first file is used.")
 	args = parser.parse_args()
 
 	if args.quiet == 1:
@@ -233,13 +235,13 @@ def handle_args():
 		verbosity = logging.DEBUG
 
 	if args.max != 1:
-		if args.max < 0:
-			print("ERROR: Maximum sample difference cannot be less than 0.")
-			max_diff = 1
 		try:
 			max_diff = int(args.max)
 		except:
 			print(f"ERROR: Maximum sample difference should be a number (got {args.max}). Continuing with default of 1.")
+			max_diff = 1
+		if int(args.max) < 0:
+			print("ERROR: Maximum sample difference cannot be less than 0.")
 			max_diff = 1
 	else:
 		max_diff = 1
@@ -249,11 +251,17 @@ def handle_args():
 	else:
 		miliseconds = False
 
+	if args.cutfile == "1":
+		cf = 1
+	elif args.cutfile == "2":
+		cf = 2
+	else:
+		cf = 1
 
-	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff, miliseconds)
+	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff, miliseconds, cf)
 
 if __name__ == '__main__':
-	(filenameA, filenameB, outputName, verbosity, max_diff, timestamps) = handle_args()
+	(filenameA, filenameB, outputName, verbosity, max_diff, timestamps, cf) = handle_args()
 	logging.basicConfig(format="%(message)s", level=verbosity)
 	MAX_DIFFERENCE = max_diff
 	SHOW_MILLIS = timestamps
@@ -262,6 +270,10 @@ if __name__ == '__main__':
 	mismatches = compare_files(data_a, data_b, filenameA, filenameB)
 	if outputName != None:
 		(cuts_a, cuts_b) = generate_cut_lists(mismatches)
-		remove_samples_from_list(data_a["samples"], cuts_a)
-		samples_to_file(data_a, outputName)
+		if cf == 1:
+			remove_samples_from_list(data_a["samples"], cuts_a)
+			samples_to_file(data_a, outputName)
+		elif cf == 2:
+			remove_samples_from_list(data_b["samples"], cuts_b)
+			samples_to_file(data_b, outputName)
 
