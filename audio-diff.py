@@ -1,4 +1,5 @@
 from pydub import AudioSegment
+from pydub.utils import mediainfo
 from argparse import ArgumentParser
 import logging
 
@@ -6,11 +7,12 @@ import logging
 #TODO: Could be worth a setting to reduce sample rate for processing (eg throw out every other sample for ~2x speedup, with minor loss of precision when calculating ad timestamps)
 #TODO: Most ads are going to be ~30 seconds, so it might be worth searching like 14-35 first and then doubling back to 0-14 before doing 35+
 #TODO: Add SHOW_MILLIS command line argument
+#TODO: Handle different sample rates (downmux? would this even work in practice?)
 
 # Show milliseconds in timestamps
-SHOW_MILLIS = True
+SHOW_MILLIS = False
 
-def samples_from_file(path):
+def data_from_file(path):
 	# Convert the file to an array of samples
 	# Some quick calculations tell me that 3-hour-long file at 44.1kHz should fit into a python list even on 32 bit -- I'm not sure but we'll try
 	audio = AudioSegment.from_file(path, format="mp3")
@@ -23,7 +25,19 @@ def samples_from_file(path):
 		logging.error("Error: Number of audio channels is " + str(audio.channels) + ", not 1-2.")
 		raise ValueError
 
-	return (samples, len(samples), audio.channels == 1, audio.frame_rate, audio.sample_width, audio)
+	info = mediainfo(path)
+
+	returnVals = {
+		"samples": samples,
+		"length": len(samples),
+		"isMono": audio.channels == 1,
+		"sampleRate": audio.frame_rate,
+		"sampleWidth": audio.sample_width,
+		"audioSegment": audio,
+		"bitrate": info["bit_rate"],
+		"tags": info["TAG"]
+	}
+	return returnVals
 
 def sample_distance(offset_a, offset_b, sampA, sampB):
 	return abs(sampA[offset_a] - sampB[offset_b])
@@ -134,14 +148,12 @@ def timestamp_from_seconds(seconds, wantMils=SHOW_MILLIS):
 	return res
 
 def get_audio_data(fileA, fileB):
-	a_data = {"samples": None, "length": None, "isMono": None, "sampleRate": None, "sampleWidth": None, "audioSegment": None}
-	b_data = {"samples": None, "length": None, "isMono": None, "sampleRate": None, "sampleWidth": None, "audioSegment": None}
 
 	logging.disable(level=logging.DEBUG) # Supress subprocess call
 	logging.info("Loading files...")
-	(a_data["samples"], a_data["length"], a_data["isMono"], a_data["sampleRate"], a_data["sampleWidth"], a_data["audioSegment"]) = samples_from_file(fileA)
+	a_data = data_from_file(fileA)
 	logging.info(f"Loaded {fileA}")
-	(b_data["samples"], b_data["length"], b_data["isMono"], b_data["sampleRate"], b_data["sampleWidth"], a_data["audioSegment"]) = samples_from_file(fileB)
+	b_data = data_from_file(fileB)
 	logging.info(f"Loaded {fileB}")
 	logging.info("Searching...")
 	logging.disable(logging.NOTSET)
@@ -197,7 +209,7 @@ def samples_to_file(data, filename):
 
 	segment = data["audioSegment"]._spawn(data["samples"])
 	with open(filename, "wb") as f:
-		segment.export(f, format="mp3", bitrate="128k") #TODO: Handle bitrate properly
+		segment.export(f, format="mp3", bitrate=data["bitrate"], tags=data["tags"])
 	#TODO: Set metadata correctly
 	logging.disable(logging.NOTSET)
 	logging.info("Saved recut audio to " + filename)
