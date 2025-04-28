@@ -6,11 +6,7 @@ import logging
 #TODO: Setting to only look at one sample in a stereo recording, should usually be fine and give ~2x speedup?
 #TODO: Could be worth a setting to reduce sample rate for processing (eg throw out every other sample for ~2x speedup, with minor loss of precision when calculating ad timestamps)
 #TODO: Most ads are going to be ~30 seconds, so it might be worth searching like 14-35 first and then doubling back to 0-14 before doing 35+
-#TODO: Add SHOW_MILLIS command line argument
 #TODO: Handle different sample rates (downmux? would this even work in practice?)
-
-# Show milliseconds in timestamps
-SHOW_MILLIS = False
 
 def data_from_file(path):
 	# Convert the file to an array of samples
@@ -135,7 +131,7 @@ def seconds_at_sample(pos, sampleRate, isMono):
 	else:
 		return pos/(2*sampleRate)
 
-def timestamp_from_seconds(seconds, wantMils=SHOW_MILLIS):
+def timestamp_from_seconds(seconds):
 	hours   = int(seconds//3600) 
 	minutes = int(seconds//60) % 60 # I don't know why seconds // 60 % 60 is returning a float but it apparently is :|
 	milis   = int(100*(seconds - int(seconds)))
@@ -143,8 +139,8 @@ def timestamp_from_seconds(seconds, wantMils=SHOW_MILLIS):
 	res = f"{minutes:02d}:{int(seconds):02d}"
 	if hours > 0:
 		res = f"{hours}:" + res
-	if wantMils:
-		res = res + f":{milis:02d}"
+	if SHOW_MILLIS:
+		res = res + f".{milis:02d}"
 	return res
 
 def get_audio_data(fileA, fileB):
@@ -210,7 +206,6 @@ def samples_to_file(data, filename):
 	segment = data["audioSegment"]._spawn(data["samples"])
 	with open(filename, "wb") as f:
 		segment.export(f, format="mp3", bitrate=data["bitrate"], tags=data["tags"])
-	#TODO: Set metadata correctly
 	logging.disable(logging.NOTSET)
 	logging.info("Saved recut audio to " + filename)
 
@@ -226,7 +221,8 @@ def handle_args():
 	parser.add_argument("file_2", help="The second file to compare.")
 	parser.add_argument("output_file", nargs="?", help="If provided, the matching audio sections will be saved to an mp3 file with that filename.")
 	parser.add_argument("-q", "--quiet", action="count", default=0, help="Reduce amount of output text. Use -q to only output after the files are processed, or -qq to hide all output except errors.")
-	parser.add_argument("-m", "--max", action="store_const", const=1, default=1, help="Set the maximum difference between samples to accept before flagging them as different audio. Default is 1.")
+	parser.add_argument("-m", "--max", action="store_const", const=1, default=1, help="Set the maximum difference between samples to accept before flagging them as different audio. Default is 1."),
+	parser.add_argument("-ms", "--miliseconds", action="count", default=0, help="If provided, timestamps will show miliseconds.")
 	args = parser.parse_args()
 
 	if args.quiet == 1:
@@ -248,12 +244,19 @@ def handle_args():
 	else:
 		max_diff = 1
 
-	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff)
+	if args.miliseconds >= 1:
+		miliseconds = True
+	else:
+		miliseconds = False
+
+
+	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff, miliseconds)
 
 if __name__ == '__main__':
-	(filenameA, filenameB, outputName, verbosity, max_diff) = handle_args()
+	(filenameA, filenameB, outputName, verbosity, max_diff, timestamps) = handle_args()
 	logging.basicConfig(format="%(message)s", level=verbosity)
 	MAX_DIFFERENCE = max_diff
+	SHOW_MILLIS = timestamps
 
 	(data_a, data_b) = get_audio_data(filenameA, filenameB)
 	mismatches = compare_files(data_a, data_b, filenameA, filenameB)
