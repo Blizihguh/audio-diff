@@ -12,6 +12,10 @@ Provide the two files you want to compare, and optionally, the filename for outp
 
 `-m, --max` can be used to change how much difference the program should tolerate between two samples before considering them to be different. By default this is 1, so an audio sample of 45 would be considered the same as an audio sample of 44 or 46. It's not recommended to change this, as many audio workflows can be expected to change samples by this much. A stricter setting may introduce false positives, where the program sees two files as different when the difference would be imperceptible to the human ear.
 
+`-ms, --milliseconds` makes timestamps in the console show milliseconds.
+
+`-cf, --cutfile` changes which file is used as the audio source when generating file output. -cf 1 will use the first file, -cf 2 will use the second. By default, the first file is used. Because the goal is to have the output file contain only content that's the same between the two input files, this should be mostly irrelevant. The main reason to use this is to preserve metadata, if one file has it and the other does not. Because the -m flag defaults to 1, you could also use -cf if you care about having the exact samples from a certain file, though this should not produce any differences that are audible to humans.
+
 # Why is Audio Diff?
 Have you ever been listening to a podcast, fully immersed, when this happened?
 > "Most of the time, it was pretty slow going." *That's Bob McAllison, who spent thirty years as the head of the Blue Rock Police Department's homicide division.* "Not a lot happened 'round Blue Rock back in those days. Certainly not a lot of murders. When we got to the scene, poor Jim nearly vomitted -- it was gruesome stuff. And it never leaves you, seeing all those people. All those bits of people, chewed up. ... I still have nightmares." *Paypal makes it easy for you to pay all your pals! Whether you're at home or on the go, it's never been easier to split the bill!*
