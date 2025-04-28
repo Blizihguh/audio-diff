@@ -223,7 +223,7 @@ def handle_args():
 	parser.add_argument("output_file", nargs="?", help="If provided, the matching audio sections will be saved to an mp3 file with that filename.")
 	parser.add_argument("-q", "--quiet", action="count", default=0, help="Reduce amount of output text. Use -q to only output after the files are processed, or -qq to hide all output except errors.")
 	parser.add_argument("-m", "--max", action="store", default=1, help="Set the maximum difference between samples to accept before flagging them as different audio. Default is 1."),
-	parser.add_argument("-ms", "--milliseconds", action="count", default=0, help="If provided, timestamps will show miliseconds.")
+	parser.add_argument("-ms", "--milliseconds", action="count", default=0, help="If provided, timestamps will show milliseconds.")
 	parser.add_argument("-cf", "--cutfile", action="store", default=0, help="Specify which file to use when recutting, eg -cf 1 to use file 1. By default the first file is used.")
 	args = parser.parse_args()
 
@@ -246,10 +246,10 @@ def handle_args():
 	else:
 		max_diff = 1
 
-	if args.miliseconds >= 1:
-		miliseconds = True
+	if args.milliseconds >= 1:
+		milliseconds = True
 	else:
-		miliseconds = False
+		milliseconds = False
 
 	if args.cutfile == "1":
 		cf = 1
@@ -258,7 +258,7 @@ def handle_args():
 	else:
 		cf = 1
 
-	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff, miliseconds, cf)
+	return (args.file_1, args.file_2, args.output_file, verbosity, max_diff, milliseconds, cf)
 
 if __name__ == '__main__':
 	(filenameA, filenameB, outputName, verbosity, max_diff, timestamps, cf) = handle_args()
